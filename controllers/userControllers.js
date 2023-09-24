@@ -1,8 +1,28 @@
+const path = require("path");
+const fs = require("fs/promises");
+
 const User = require("../db/models/userModel");
 
 const jwt = require("jsonwebtoken");
 
 const { SECRET_KEY } = process.env;
+
+const updateAvatar = async (req, res) => {
+  const avatarDir = path.join(__dirname, "../", "public", "avatar");
+  if (!req.file) {
+    res.status(400).json({ message: "File is not exist" });
+  }
+  const { path: tempUpload, originalname } = req.file;
+  const { _id } = req.user;
+  const filename = `${_id}_${originalname}`;
+  const resultUpload = path.join(avatarDir, filename);
+  await fs.rename(tempUpload, resultUpload);
+
+  const avatarURL = path.join("avatar", filename);
+  await User.findByIdAndUpdate(_id, { avatarURL });
+
+  res.json({ avatarURL });
+};
 
 const signup = async (req, res) => {
   const { name, email, password } = req.body;
@@ -12,6 +32,7 @@ const signup = async (req, res) => {
     return;
   }
   const newUser = new User({ name, email, password });
+
   await newUser.hashPassword(password);
   await newUser.save();
 
@@ -65,4 +86,4 @@ const getCurrent = (req, res, next) => {
   }
 };
 
-module.exports = { signup, login, logout, getCurrent };
+module.exports = { signup, login, logout, getCurrent, updateAvatar };
